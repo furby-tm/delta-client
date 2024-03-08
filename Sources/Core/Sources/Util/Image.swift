@@ -1,6 +1,6 @@
 import Foundation
-import SwiftImage
 import PNG
+import SwiftImage
 
 public enum ImageError: LocalizedError {
   case failedToReadPNGFile

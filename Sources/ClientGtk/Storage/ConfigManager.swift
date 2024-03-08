@@ -116,7 +116,7 @@ public final class ConfigManager {
     }
     
     do {
-      try await config.accounts[account.id]?.refreshIfExpired(withClientToken: config.clientToken)
+      try await config.accounts[account.id]?.refreshed(withClientToken: config.clientToken)
     } catch {
       throw ConfigError.accountRefreshFailed(error)
     }

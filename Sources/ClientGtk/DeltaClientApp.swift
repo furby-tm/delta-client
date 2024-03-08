@@ -1,18 +1,21 @@
+import DeltaCore
 import Dispatch
 import Foundation
 import SwiftCrossUI
-import DeltaCore
 
 @main
-struct DeltaClientApp: App {
-  enum DeltaClientState {
+struct DeltaClientApp: App
+{
+  enum DeltaClientState
+  {
     case loading(message: String)
     case selectServer
     case settings
     case play(ServerDescriptor, ResourcePack)
   }
 
-  class StateStorage: Observable {
+  class StateStorage: Observable
+  {
     @Observed var state = DeltaClientState.loading(message: "Loading")
     var resourcePack: ResourcePack?
   }
@@ -22,30 +25,36 @@ struct DeltaClientApp: App {
 
   var state = StateStorage()
 
-  public init() {
+  public init()
+  {
     load()
   }
 
-  func load() {
-    DispatchQueue(label: "loading").async {
+  func load()
+  {
+    DispatchQueue(label: "loading").async
+    {
       let assetsDirectory = URL(fileURLWithPath: "assets")
       let registryDirectory = URL(fileURLWithPath: "registry")
       let cacheDirectory = URL(fileURLWithPath: "cache")
 
-      do {
+      do
+      {
         // Download vanilla assets if they haven't already been downloaded
-        if !StorageManager.directoryExists(at: assetsDirectory) {
+        if !StorageManager.directoryExists(at: assetsDirectory)
+        {
           loading("Downloading assets")
-          try ResourcePack.downloadVanillaAssets(forVersion: Constants.versionString, to: assetsDirectory) { progress, message in
-            loading(message)
-          }
+          var progress: TaskProgress<ResourcePack.DownloadStep>? = nil
+          try ResourcePack.downloadVanillaAssets(forVersion: Constants.versionString, to: assetsDirectory, progress: progress)
+          loading(progress?.message ?? "")
         }
 
         // Load registries
         loading("Loading registries")
-        try RegistryStore.populateShared(registryDirectory) { progress, message in
-          loading(message)
-        }
+        var progress: TaskProgress<RegistryStore.RegistryLoadingStep>? = nil
+        try RegistryStore.populateShared(registryDirectory, progress: progress)
+        loading(progress?.message ?? "")
+        
 
         // Load resource pack and cache it if necessary
         loading("Loading resource pack")
@@ -56,46 +65,61 @@ struct DeltaClientApp: App {
           cacheDirectory: cacheExists ? packCache : nil
         )
         cacheExists = StorageManager.directoryExists(at: packCache)
-        if !cacheExists {
-          do {
-            if let resourcePack = state.resourcePack {
+        if !cacheExists
+        {
+          do
+          {
+            if let resourcePack = state.resourcePack
+            {
               try resourcePack.cache(to: packCache)
             }
-          } catch {
+          }
+          catch
+          {
             log.warning("Failed to cache vanilla resource pack")
           }
         }
 
-        self.state.state = .selectServer
-      } catch {
+        state.state = .selectServer
+      }
+      catch
+      {
         loading("Failed to load: \(error.localizedDescription) (\(error))")
       }
     }
   }
 
-  func loading(_ message: String) {
-    self.state.state = .loading(message: message)
+  func loading(_ message: String)
+  {
+    state.state = .loading(message: message)
   }
 
-  var body: some ViewContent {
-    VStack {
-      switch state.state {
-        case .loading(let message):
+  var body: some ViewContent
+  {
+    VStack
+    {
+      switch state.state
+      {
+        case let .loading(message):
           Text(message)
         case .selectServer:
-          ServerListView { server in
-            if let resourcePack = state.resourcePack {
+          ServerListView
+          { server in
+            if let resourcePack = state.resourcePack
+            {
               state.state = .play(server, resourcePack)
             }
           } openSettings: {
             state.state = .settings
           }
         case .settings:
-          SettingsView {
+          SettingsView
+          {
             state.state = .selectServer
           }
-        case .play(let server, let resourcePack):
-          GameView(server, resourcePack) {
+        case let .play(server, resourcePack):
+          GameView(server, resourcePack)
+          {
             state.state = .selectServer
           }
       }
